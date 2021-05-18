@@ -1,0 +1,22 @@
+{
+  "name": "docker-wale",
+  "version": "1.0.0",
+  "description": "",
+  "main": "read-all-docker-file.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyut10430004/docker-wale.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cyut10430004/docker-wale/issues"
+  },
+  "homepage": "https://github.com/cyut10430004/docker-wale#readme",
+  "dependencies": {
+    "glob": "^7.1.7"
+  }
+}
