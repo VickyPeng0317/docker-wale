@@ -2,7 +2,8 @@
   "name": "docker-wale",
   "version": "1.0.0",
   "description": "",
-  "main": "read-all-docker-file.js",
+  "main": "main.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -17,6 +18,10 @@
   },
   "homepage": "https://github.com/cyut10430004/docker-wale#readme",
   "dependencies": {
-    "glob": "^7.1.7"
+    "glob": "^7.1.7",
+    "rxjs": "^7.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
   }
 }
