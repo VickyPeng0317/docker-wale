@@ -2,7 +2,7 @@
 // 讀取 file body 參考 https://dev.to/aminnairi/read-files-using-promises-in-node-js-1mg6
 
 import { of, from } from "rxjs";
-import { switchMap, tap } from "rxjs/operators";
+import { map, switchMap, tap } from "rxjs/operators";
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -40,6 +40,9 @@ function getAllDockerFileInfo(allDockerFilePath) {
     }));
 }
 
+/**
+ * 取得所有 os 套件
+ */
 function getOsPackageList(infoList) {
     const allPackge = infoList.flatMap(({fileContent}) => 
         fileContent.split('# os package')[1].split('\n').filter(s => !!s)
@@ -48,6 +51,9 @@ function getOsPackageList(infoList) {
     return packgeList;
 }
 
+/**
+ * 取得 Base image
+ */
 function getBaseImage(infoList) {
     const [firstInfo] = infoList;
     const {fileContent} = firstInfo;
@@ -55,22 +61,36 @@ function getBaseImage(infoList) {
     return baseImage;
 }
 
-function generateCoreImage(packageList, baseImage) {
+/**
+ * 產出 Core image
+ */
+function generateCoreImage(imagePath, imageName, infoList) {
+    // 取得所有 package
+    const packageList = getOsPackageList(infoList);
+    // Base image 字串
+    const baseImage = getBaseImage(infoList);
+    // package  套件字串
     const packageContent = packageList.reduce((res, content) => res + content + '\n', '');
-    return `# Core image\n${baseImage}\n# os package\n${packageContent}`
+    // 組出 Core image content 準備寫檔
+    const coreImageContent = `#${imageName}\n${baseImage}\n# os package\n${packageContent}`;
+    // 寫檔
+    const {promises: {writeFile}} = fs;
+    return from(writeFile(imagePath, coreImageContent)).pipe(
+        map(() => infoList)
+    );
 }
 
+/**
+ * 論文方法
+ */
 function WALE() {
-    const projectsPath = './angular';
-    of(projectsPath).pipe(
+    const PROJECTS_PATH = './angular';
+    const CORE_IMAGE_PATH = './wale/Dockerfile';
+    const CORE_IMAGE_NAME = 'wale-core';
+    of(PROJECTS_PATH).pipe(
         switchMap(projectsPath => getAllDockerFilePath(projectsPath)),
-        switchMap(allePath => getAllDockerFileInfo(allePath)),
-        switchMap(infoList => {
-            const packageList = getOsPackageList(infoList);
-            const baseImage = getBaseImage(infoList);
-            const coreImageFileContent = generateCoreImage(packageList, baseImage);
-            return of(coreImageFileContent)
-        })
+        switchMap(allFilePath => getAllDockerFileInfo(allFilePath)),
+        switchMap(infoList => generateCoreImage(CORE_IMAGE_PATH, CORE_IMAGE_NAME, infoList))
     ).subscribe(res => console.log(res));
 }
 
