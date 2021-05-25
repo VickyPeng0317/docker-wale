@@ -28,7 +28,7 @@ function getAllDockerFilePath(projectsPath) {
 /**
  * 讀取目錄內的所有 Dockerfile 內容
  */
-function readAllDockerFileContent(allDockerFilePath) {
+function getAllDockerFileInfo(allDockerFilePath) {
     const {promises: {readFile}} = fs;
     const readPromiseList = allDockerFilePath.map(filePath => readFile(filePath));
     return from(Promise.all(readPromiseList).then(allFileContent => {
@@ -40,8 +40,38 @@ function readAllDockerFileContent(allDockerFilePath) {
     }));
 }
 
-const projectsPath = './angular';
-of(projectsPath).pipe(
-    switchMap(projectsPath => getAllDockerFilePath(projectsPath)),
-    switchMap(allDockerFilePath => readAllDockerFileContent(allDockerFilePath)),
-).subscribe(res => console.log(res[2].filePath));
+function getOsPackageList(infoList) {
+    const allPackge = infoList.flatMap(({fileContent}) => 
+        fileContent.split('# os package')[1].split('\n').filter(s => !!s)
+    );
+    const packgeList = [... new Set(allPackge)];
+    return packgeList;
+}
+
+function getBaseImage(infoList) {
+    const [firstInfo] = infoList;
+    const {fileContent} = firstInfo;
+    const baseImage = fileContent.split('\n').find(c => c.includes('FROM'));
+    return baseImage;
+}
+
+function generateCoreImage(packageList, baseImage) {
+    const packageContent = packageList.reduce((res, content) => res + content + '\n', '');
+    return `# Core image\n${baseImage}\n# os package\n${packageContent}`
+}
+
+function WALE() {
+    const projectsPath = './angular';
+    of(projectsPath).pipe(
+        switchMap(projectsPath => getAllDockerFilePath(projectsPath)),
+        switchMap(allePath => getAllDockerFileInfo(allePath)),
+        switchMap(infoList => {
+            const packageList = getOsPackageList(infoList);
+            const baseImage = getBaseImage(infoList);
+            const coreImageFileContent = generateCoreImage(packageList, baseImage);
+            return of(coreImageFileContent)
+        })
+    ).subscribe(res => console.log(res));
+}
+
+WALE();

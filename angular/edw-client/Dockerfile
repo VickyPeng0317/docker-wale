@@ -4,13 +4,14 @@ FROM ubuntu:16.04
 # 指定預設/工作資料夾
 WORKDIR /usr/app
 
-# os 套件
+# os package
 RUN apt-get update
 RUN apt-get -y install curl
 RUN apt-get -y install nodejs
 RUN apt-get install npm -y
 RUN ln -s /usr/bin/nodejs /usr/bin/node
 RUN npm install n --global
+# os package
 
 # 指定 node 版本
 RUN n 10.13
