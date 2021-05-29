@@ -1,19 +1,21 @@
-# 第一階段產生dist資料夾
+## from
 FROM ubuntu:16.04
+## from
 
-# 指定預設/工作資料夾
+## workdir
 WORKDIR /usr/app
+## workdir
 
-# os package
+## os package
 RUN apt-get update
 RUN apt-get -y install curl
 RUN apt-get -y install nodejs
 RUN apt-get install npm -y
 RUN ln -s /usr/bin/nodejs /usr/bin/node
 RUN npm install n --global
-# os package
+## os package
 
-# 指定 node 版本
+## working
 RUN n 10.13
 
 # 只copy package.json檔案
@@ -38,3 +40,4 @@ RUN npm run build --output-path=./dist/frontend --prod
 #
 ## 覆蓋image裡的設定檔
 #COPY ./nginx-custom.conf /etc/nginx/conf.d/default.conf
+## working

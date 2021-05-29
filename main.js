@@ -6,6 +6,10 @@ import { map, switchMap, tap } from "rxjs/operators";
 import * as path from 'path';
 import * as fs from 'fs';
 
+function getContentByTag(tagName, content) {
+    return content.split(`## ${tagName}`)[1];
+}
+
 /**
  * 取得目錄內的所有 Dockerfile path
  */
@@ -45,7 +49,7 @@ function getAllDockerFileInfo(allDockerFilePath) {
  */
 function getOsPackageList(infoList) {
     const allPackge = infoList.flatMap(({fileContent}) => 
-        fileContent.split('# os package')[1].split('\n').filter(s => !!s)
+        fileContent.split('## os package')[1].split('\n').filter(s => !!s)
     );
     const packgeList = [... new Set(allPackge)];
     return packgeList;
@@ -62,9 +66,9 @@ function getBaseImage(infoList) {
 }
 
 /**
- * 產出 Core image
+ * 產出 Wale Core image
  */
-function generateCoreImage(imagePath, imageName, infoList) {
+function generateWaleCoreImage(imagePath, imageName, infoList) {
     // 取得所有 package
     const packageList = getOsPackageList(infoList);
     // Base image 字串
@@ -81,17 +85,62 @@ function generateCoreImage(imagePath, imageName, infoList) {
 }
 
 /**
+ * 產出 Wale App image
+ */
+function generateWaleAppImage(CORE_IMAGE_NAME, infoList) {
+    // 定義產出 app image 方法
+    const getAppImageFromCore = (content => {
+        const from = `FROM ${CORE_IMAGE_NAME}`
+        const workdir = getContentByTag('workdir', content);
+        const working = getContentByTag('working', content);
+        const newContent = `${from}\n${workdir}\n${working}`;
+        return newContent;
+    });
+    // 加入新欄位到 info list
+    const newInfoList = infoList.map(info => {
+        const { filePath, fileContent } = info;
+        const [ folderPath ] = filePath.split('Dockerfile');
+        const waleImagePath = folderPath + 'WaleDockerfile';
+        const waleImageContent = getAppImageFromCore(fileContent);
+        return {...info, waleImagePath, waleImageContent};
+    });
+    // 產出檔案 
+    const {promises: {writeFile}} = fs;
+    const promiseList = newInfoList.map(({ waleImagePath, waleImageContent }) => 
+        writeFile(waleImagePath, waleImageContent)
+    );
+    return from(Promise.all(promiseList)).pipe(
+        map(() => newInfoList)
+    );
+}
+
+// function buildWaleCoreImage() {
+
+// }
+
+// function buildWaleAppImage() {
+
+// }
+
+/**
  * 論文方法
  */
 function WALE() {
     const PROJECTS_PATH = './angular';
     const CORE_IMAGE_PATH = './wale/Dockerfile';
-    const CORE_IMAGE_NAME = 'wale-core';
+    const CORE_IMAGE_NAME = 'wale/core';
     of(PROJECTS_PATH).pipe(
         switchMap(projectsPath => getAllDockerFilePath(projectsPath)),
         switchMap(allFilePath => getAllDockerFileInfo(allFilePath)),
-        switchMap(infoList => generateCoreImage(CORE_IMAGE_PATH, CORE_IMAGE_NAME, infoList))
-    ).subscribe(res => console.log(res));
+        switchMap(infoList => generateWaleCoreImage(CORE_IMAGE_PATH, CORE_IMAGE_NAME, infoList)),
+        switchMap(infoList => generateWaleAppImage(CORE_IMAGE_NAME, infoList))
+    ).subscribe(infoList => {
+        // buildWaleCoreImage(CORE_IMAGE_PATH);
+        // buildWaleAppImage(infoList);
+        console.log(infoList);
+    });
 }
 
 WALE();
+//node - build 出 core image
+//node - build 出所有 image

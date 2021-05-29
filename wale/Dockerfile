@@ -1,4 +1,4 @@
-#wale-core
+#wale/core
 FROM ubuntu:16.04
 # os package
 RUN apt-get update
