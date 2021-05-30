@@ -20,6 +20,7 @@
   "homepage": "https://github.com/cyut10430004/docker-wale#readme",
   "dependencies": {
     "glob": "^7.1.7",
+    "moment": "^2.29.1",
     "rxjs": "^7.1.0"
   },
   "devDependencies": {
