@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon main.js"
+    "start": "nodemon main.js",
+    "start:sql": "nodemon main-sql.js",
+    "start:db": "nodemon db-build.js"
   },
   "repository": {
     "type": "git",
@@ -21,7 +23,11 @@
   "dependencies": {
     "glob": "^7.1.7",
     "moment": "^2.29.1",
-    "rxjs": "^7.1.0"
+    "msnodesqlv8": "^2.2.0",
+    "mssql": "^7.1.3",
+    "mysql": "^2.18.1",
+    "rxjs": "^7.1.0",
+    "tedious": "^11.0.9"
   },
   "devDependencies": {
     "nodemon": "^2.0.7"

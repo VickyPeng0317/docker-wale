@@ -2,12 +2,13 @@
 // 讀取 file body 參考 https://dev.to/aminnairi/read-files-using-promises-in-node-js-1mg6
 
 import { of, from } from "rxjs";
-import { map, switchMap, tap } from "rxjs/operators";
+import { delay, map, switchMap, tap } from "rxjs/operators";
 import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
 import * as child_process from 'child_process';
 import moment from 'moment'
+import {selectAllByMsSQL, selectAllByMySQL, insertDataByMySQL, insertDataByMsSQL} from './main-sql.js';
 
 function runCmd(cmd) {
     const exec = util.promisify(child_process.exec);
@@ -56,14 +57,15 @@ function getAllDockerFileInfo(allDockerFilePath) {
 /**
  * 取得所有 os 套件
  */
-function getOsPackageList(infoList) {
-    const allPackge = infoList.flatMap(({fileContent, filePath}) => {
-        const packge = fileContent.split('## os package')[1].split('\n').filter(s => !!s);
-        // packge.forEach(p => insertDataByMySQL(filePath.split('\\').join('\\\\'), p));
-        return packge;
-    });
-    const packgeList = [... new Set(allPackge)];
-    return packgeList;
+function getOsPackageList() {
+    const isMySql = false;
+    const obs = isMySql ? selectAllByMySQL() : selectAllByMsSQL();
+    return obs.pipe(
+        // tap(row => row.forEach(x => insertDataByMsSQL(x))),
+        map(row => row.map(x => x.packageCommand)),
+        map(commandList => [... new Set(commandList)]),
+        tap(res => console.log(res)),
+    );
 }
 
 /**
@@ -81,16 +83,18 @@ function getBaseImage(infoList) {
  */
 function generateWaleCoreImage(dockerFilePath, imageName, infoList) {
     // 取得所有 package
-    const packageList = getOsPackageList(infoList);
-    // Base image 字串
-    const baseImage = getBaseImage(infoList);
-    // package  套件字串
-    const packageContent = packageList.reduce((res, content) => res + content + '\n', '');
-    // 組出 Core image content 準備寫檔
-    const coreImageContent = `#${imageName}\n${baseImage}\n# os package\n${packageContent}`;
-    // 寫檔
-    const {promises: {writeFile}} = fs;
-    return from(writeFile(`${dockerFilePath}/Dockerfile`, coreImageContent)).pipe(
+    return getOsPackageList().pipe(
+        map(packageList => {
+            // Base image 字串
+            const baseImage = getBaseImage(infoList);
+            // package  套件字串
+            const packageContent = packageList.reduce((res, content) => res + content + '\n', '');
+            // 組出 Core image content 準備寫檔
+            const coreImageContent = `#${imageName}\n${baseImage}\n# os package\n${packageContent}`;
+            // 寫檔
+            const {promises: {writeFile}} = fs;
+            return from(writeFile(`${dockerFilePath}/Dockerfile`, coreImageContent));
+        }),
         map(() => infoList)
     );
 }
@@ -127,31 +131,6 @@ function generateWaleAppImage(CORE_IMAGE_NAME, infoList) {
     return from(Promise.all(promiseList)).pipe(
         map(() => newInfoList)
     );
-}
-
-function buildWaleCoreImage(dockerFilePath, imageName) {
-    console.log('Build core start: ' + moment().format('yyyy-MM-DD HH:mm:ss'));
-    return from(Promise.all([
-        runCmd(`cd ${dockerFilePath} & docker build -t ${imageName} .`),
-        runCmd(`docker image ls`),
-    ])).pipe(
-        tap(() => console.log('Build core end: ' + moment().format('yyyy-MM-DD HH:mm:ss')))
-    );
-}
-
-function buildWaleAppImage(infoList) {
-    console.log('Build app start: ' + moment().format('yyyy-MM-DD HH:mm:ss'));
-    const promiseList = infoList.map(info => {
-        const { folderPath, waleDockerFileName, waleImageName } = info;
-        return runCmd(`cd ${folderPath} & docker build -t ${waleImageName} -f ${waleDockerFileName} .`).then((a, b) => {
-            console.log('a', a);
-            console.log('b', b);
-        });
-    });
-    return from(Promise.all(promiseList)).pipe(
-        tap(() => console.log('Build app end: ' + moment().format('yyyy-MM-DD HH:mm:ss')))
-    );
-    // docker build -t mysuperimage -f MyDockerfile .
 }
 
 /**
